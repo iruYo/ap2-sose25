@@ -1,7 +1,7 @@
 import de.th_koeln.basicstage.Actor
 import de.th_koeln.imageprovider.Assets
 
-class Pet(val name: String, private var health: Health = Health(40, 50), private var happiness: Int = 0) {
+data class Pet(val name: String, private val health: Health, val happiness: Int) {
     companion object {
         private const val ENERGYBAR_CONST = "ENERGY: "
         private const val HAPPINESSBAR_CONST = "HAPPINESS: "
@@ -18,23 +18,39 @@ class Pet(val name: String, private var health: Health = Health(40, 50), private
         private fun happinessBarText(text: Any): String {
             return "$HAPPINESSBAR_CONST $text"
         }
+
+        private fun checkForHunger(curEnergy: Int): Boolean {
+            return curEnergy < 20
+        }
+
+        private fun setZeroIfNegative(cur: Int, impact: Int): Int {
+            var newValue = cur + impact
+
+            if (newValue < 0) {
+                newValue = 0
+            }
+
+            return newValue
+        }
     }
+    private var hungry: Boolean
+    private var _health = health
+    private var _happiness = happiness
+    private var inventory: List<Item> = emptyList()
 
-    val entity: Actor = Actor(Assets.dog.HAPPY, 0, 300)
-    val energyBar: Actor = Actor(Assets.EMPTY, 0, 0, 160, 40)
-    val hungerBar: Actor = Actor(Assets.EMPTY, 161, 0, 170, 40)
-    val happinessBar: Actor = Actor(Assets.EMPTY, 332, 0, 180, 40)
-    private var hungry: Boolean = checkForHunger()
-
-    private var inventory: MutableList<Item> = emptyList<Item>().toMutableList() //?!
+    private val entity: Actor = Actor(Assets.dog.HAPPY, 0, 300)
+    private val energyBar: Actor = Actor(Assets.EMPTY, 0, 0, 160, 40)
+    private val hungerBar: Actor = Actor(Assets.EMPTY, 161, 0, 170, 40)
+    private val happinessBar: Actor = Actor(Assets.EMPTY, 332, 0, 180, 40)
 
     init {
         energyBar.text.textBackground = Assets.textBackgrounds.STONE
-        energyBar.text.content = energyBarText(health.energy)
+        energyBar.text.content = energyBarText(_health.energy)
 
         happinessBar.text.textBackground = Assets.textBackgrounds.STONE
-        happinessBar.text.content = happinessBarText(happiness)
+        happinessBar.text.content = happinessBarText(_happiness)
 
+        hungry = checkForHunger(_health.energy)
         hungerBar.text.textBackground = Assets.textBackgrounds.STONE
         hungerBar.text.content = hungerBarText(this.hungry)
 
@@ -44,53 +60,70 @@ class Pet(val name: String, private var health: Health = Health(40, 50), private
         }
     }
 
+    fun doActivity(activity: Activity): Pet {
+        println("Doing activity: ${activity.description}")
+        return activity.execute(this)
+    }
+
     fun handleItem(item: Item): Pet {
         if (item.category == ItemCategory.FOOD) {
             feed(item)
         } else {
-            inventory.add(item)
-            consooom(item)
+            updateInventory { it.add(item) }
+            use(item)
         }
 
-        return this
+        return this.copy(health = _health, happiness = _happiness)
     }
 
     fun removeItem(item: Item): Pet {
-        inventory.remove(item)
-        updateHappiness(this.happiness - item.happinessImpact)
+        updateInventory { it.remove(item) }
+        updateHappiness(item.happinessImpact)
         return this
     }
 
+    fun getHealth(): Health {
+        return _health
+    }
+
+    fun getActors(): List<Actor> {
+        return listOf(entity, energyBar, hungerBar, happinessBar)
+    }
+
+    private fun updateInventory(action: (MutableList<Item>) -> Unit) {
+        val newInventory = inventory.toMutableList()
+
+        action(newInventory)
+
+        inventory = newInventory.toList()
+    }
+
     private fun feed(item: Item) {
-        updateEnergy(this.health.energy + item.energyImpact)
+        updateEnergy(item.energyImpact)
     }
 
-    private fun consooom(item: Item) {
-        updateHappiness(this.happiness + item.happinessImpact)
+    private fun use(item: Item) {
+        updateHappiness(item.happinessImpact)
     }
 
-    private fun checkForHunger(): Boolean {
-        return health.energy < 20
+    private fun updateEnergy(energyImpact: Int) {
+        _health = _health.copy(energy = setZeroIfNegative(_health.energy, energyImpact))
+
+        hungry = checkForHunger(_health.energy)
+        energyBar.text.content = energyBarText(_health.energy)
+        hungerBar.text.content = hungerBarText(checkForHunger(_health.energy))
     }
 
-    private fun updateEnergy(newEnergy: Int) {
-        this.health.energy = newEnergy
-        this.hungry = checkForHunger()
-
-        energyBar.text.content = energyBarText(this.health.energy)
-        hungerBar.text.content = hungerBarText(this.hungry)
-    }
-
-    private fun updateHappiness(newHappiness: Int) {
-        this.happiness = newHappiness
-
-        happinessBar.text.content = happinessBarText(this.happiness)
+    private fun updateHappiness(happinessImpact: Int) {
+        _happiness += setZeroIfNegative(_happiness, happinessImpact)
+        happinessBar.text.content = happinessBarText(_happiness)
     }
 
     private fun lifeGoesOn() {
         // 50 guaranteed to be random - https://xkcd.com/221/
         if (50 <= (0..100).random()) {
-            updateEnergy(health.energy - 10)
+            updateEnergy(-10)
+            println("Life went on!")
         }
     }
 }

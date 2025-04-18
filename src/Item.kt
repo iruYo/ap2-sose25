@@ -2,9 +2,7 @@ import de.th_koeln.basicstage.Actor
 import de.th_koeln.basicstage.coordinatesystem.WorldConstants
 import de.th_koeln.imageprovider.Assets
 
-
-
-class Item(name: String, val category: ItemCategory, amount: Int) {
+data class Item(val name: String, val category: ItemCategory, val amount: Int, val onActorClick: (item: Item, actor: Actor) -> Unit) {
     companion object {
         private val zeroSeq = generateSequence { 0 }.take(50).toList() // ugh
 
@@ -38,23 +36,17 @@ class Item(name: String, val category: ItemCategory, amount: Int) {
         val assetsByCategoryMapAndName = mapOf(ItemCategory.FOOD to snackAssetsByName, ItemCategory.TOY to toyAssetsByName, ItemCategory.OTHER to otherAssetsByName)
         val happinessValueByCategoryMapAndName = mapOf(ItemCategory.FOOD to snackHappinessByName, ItemCategory.TOY to toyHappinessByName, ItemCategory.OTHER to otherHappinessByName)
         val energyByCategoryMapAndName = mapOf(ItemCategory.FOOD to snackEnergyByName, ItemCategory.TOY to toyEnergyByName, ItemCategory.OTHER to otherEnergyByName)
-
     }
 
     val happinessImpact: Int = happinessValueByCategoryMapAndName[category]!![name]!!
     val energyImpact: Int = energyByCategoryMapAndName[category]!![name]!!
 
-    var onActorClick: (actor: Actor) -> Unit = { println("noop") }
-    var actors: List<Actor> = emptyList()
-
-    init {
-        actors = (1..amount)
-            .map { Actor(assetsByCategoryMapAndName[category]!![name]!!, (0..WorldConstants.STAGE_WIDTH).random() - 80, (50..WorldConstants.STAGE_HEIGHT).random() - 80) }
-            .map {
-                it.reactionForMouseClick = {
-                    onActorClick(it)
-                }
-                it
+    val actors: List<Actor> = (1..amount)
+        .map { Actor(assetsByCategoryMapAndName[category]!![name]!!, (0..WorldConstants.STAGE_WIDTH).random() - 80, (50..WorldConstants.STAGE_HEIGHT).random() - 80) }
+        .map {
+            it.reactionForMouseClick = {
+                onActorClick(this, it)
             }
-    }
+            it
+        }
 }
