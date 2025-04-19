@@ -1,9 +1,15 @@
 import de.th_koeln.basicstage.Actor
-import de.th_koeln.basicstage.coordinatesystem.WorldConstants
 import de.th_koeln.imageprovider.Assets
 import kotlin.math.absoluteValue
 
-class Activity(val description: String, private val energyImpact: Int, private val happinessImpact: Int, val onButtonClick: (activity: Activity) -> Unit) {
+data class Activity(
+    val description: String,
+    private val energyImpact: Int,
+    private val happinessImpact: Int,
+    private val onButtonClick: (activity: Activity) -> Unit,
+    private val stageEffect: () -> Unit = {},
+    private val requirements: List<String> = emptyList()
+) {
     val button: Actor = Actor(Assets.EMPTY, widthInit = 160, heightInit = 40)
 
     init {
@@ -16,16 +22,25 @@ class Activity(val description: String, private val energyImpact: Int, private v
     }
 
     fun execute(pet: Pet): Pet {
-        val curHappiness = pet.happiness
-        val curHealth = pet.getHealth()
+        val curHealth = pet.health
 
         if (curHealth.energy < energyImpact.absoluteValue) {
-            println("Energy level to low for Activity!")
-            return pet
+            throw IllegalStateException("Energy level too low for activity!")
         }
 
-        val newHealth = Health(curHealth.energy + energyImpact, curHealth.fitness)
+        val petHasRequirements = requirements.all { pet.hasItem(it) }
 
-        return pet.copy(health = newHealth, happiness = curHappiness + happinessImpact)
+        if (!petHasRequirements) {
+            throw IllegalStateException("Pet is missing required items for activity!")
+        }
+
+        var calculatedHappiness = happinessImpact
+        if (pet.lastActivity == this.description) {
+            calculatedHappiness -= (10..30).random()
+        }
+
+        stageEffect.invoke()
+
+        return pet.clone(initHealth = Health(curHealth.energy + energyImpact, curHealth.fitness), initHappiness = pet.happiness + calculatedHappiness, initLastActivity = this.description)
     }
 }
