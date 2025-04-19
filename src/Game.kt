@@ -1,16 +1,25 @@
 import de.th_koeln.basicstage.Actor
 import de.th_koeln.basicstage.Stage
 import de.th_koeln.basicstage.coordinatesystem.WorldConstants
+import de.th_koeln.basicstage.geoevents.IntersectionEventListener
 import de.th_koeln.imageprovider.Assets
 
+class RemoveOnIntersect(private val actor: Actor, private val stage: Stage) : IntersectionEventListener {
+    override fun onStartIntersection() {
+        stage.removeActor(actor)
+    }
+
+    override fun onStopIntersection() {
+        // noop
+    }
+}
+
 class Game(private val stage: Stage) {
+    companion object {
+        private const val BUTTON_HEIGHT: Int = 40
+    }
     private var pet: Pet = Pet("Guy", Health(100, 50), 0,
         Actor(Assets.dog.HAPPY, xInit = WorldConstants.STAGE_WIDTH/2, yInit = WorldConstants.STAGE_HEIGHT/2))
-    private val buttonHeight: Int = 40
-
-    private val snacks: List<Actor>
-    private val toys: List<Actor>
-    private val activities: List<Activity>
 
     private val petDoesActivity: () -> (activity: Activity) -> Unit = {
         { activity ->
@@ -59,25 +68,35 @@ class Game(private val stage: Stage) {
 
     init {
         val snackCount = 7
-        val toysCount = 20
+        val toysCount = 7
+        val flowerCount = 7
 
-        snacks = List(snackCount) { generateCategoryItem(ItemCategory.FOOD) }
-        toys = List(toysCount) { generateCategoryItem(ItemCategory.TOY) }
+        val snacks = List(snackCount) { generateCategoryItem(ItemCategory.FOOD) }
+        val toys = List(toysCount) { generateCategoryItem(ItemCategory.TOY) }
+        val flowers = (1..flowerCount).associate {
+            val item = generateCategoryItem(ItemCategory.OTHER)
+            item to RemoveOnIntersect(item, stage)
+        }
 
-        activities = listOf(
-            Activity("Bake Cookies", -5, 10, petDoesActivity(), stageEffect = spawnCookies),
-            Activity("Play Ball", -20, 30, petDoesActivity(), requirements = listOf("BALL"), stageEffect = playBall),
-            Activity("Run", -15, 20, petDoesActivity(), stageEffect = petRunsLeftToRight),
+        val activities: List<Activity> = listOf(
+            BakeCookies(onButtonClick = petDoesActivity(), stageEffect = spawnCookies),
+            PlayBall(onButtonClick = petDoesActivity(), stageEffect = playBall),
+            Run(onButtonClick = petDoesActivity(), stageEffect = petRunsLeftToRight)
         )
 
+        updatePet { pet.addEventListeners(flowers) }
         stage.addActor(pet.actors["entity"]!!)
         addPetToStage()
 
-        (activities.asSequence() zip generateSequence(buttonHeight) { it + buttonHeight })
+        (activities.asSequence() zip generateSequence(BUTTON_HEIGHT) { it + BUTTON_HEIGHT })
             .map { (activity, yInit) -> activity.button.y = yInit; activity.button }
             .forEach { stage.addActor(it) }
 
-        (snacks + toys)
+        flowers
+            .forEach { stage.addActor(it.key) }
+
+        AlignRight((snacks + toys))
+            .arrange()
             .forEach { stage.addActor(it) }
     }
 
@@ -118,7 +137,7 @@ class Game(private val stage: Stage) {
         val category = Item.categoryByName[itemName]!!
         val item = Item(itemName, category, 1)
 
-        val actor = Actor(Item.assetsByCategoryMapAndName[category]!![itemName]!!, (0..WorldConstants.STAGE_WIDTH).random() - 80, (50..WorldConstants.STAGE_HEIGHT).random() - 80)
+        val actor = Actor(Item.assetsByCategoryMapAndName[category]!![itemName]!!, (140..WorldConstants.STAGE_WIDTH).random() - 80, (60..WorldConstants.STAGE_HEIGHT).random() - 80)
         actor.reactionForMouseClick = {
             stage.removeActor(actor)
             updatePet { pet.handleItem(item) }

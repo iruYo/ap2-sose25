@@ -14,8 +14,8 @@ data class Item(val name: String, val category: ItemCategory, val amount: Int) {
         private val toyHappiness: List<Int> = listOf(5, 10, 10, 5, 1, 15, 5, 20)
         private val toyAssets: List<String> = listOf(Assets.toys.BOAT, Assets.toys.DRUMS, Assets.toys.RUBBER_DUCK, Assets.toys.TEDDY, Assets.toys.TRAIN, Assets.toys.BALLONS, Assets.toys.SPINNER, Assets.misc.BALL)
 
-        private val otherNames: List<String> = listOf("OTHER")
-        private val otherAssets: List<String> = listOf(Assets.misc.UFO)
+        private val otherNames: List<String> = listOf("FLOWER")
+        private val otherAssets: List<String> = listOf(Assets.flowers.FLOWER1)
         private val otherEnergy: List<Int> = zeroSeq.take(otherNames.size)
         private val otherHappiness: List<Int> = zeroSeq.take(otherNames.size)
 

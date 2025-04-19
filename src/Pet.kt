@@ -1,4 +1,5 @@
 import de.th_koeln.basicstage.Actor
+import de.th_koeln.basicstage.geoevents.IntersectionEventListener
 import de.th_koeln.imageprovider.Assets
 
 data class Pet(
@@ -106,25 +107,26 @@ data class Pet(
     fun handleItem(item: Item): Pet {
         println("Handling item: ${item.name}")
 
-        if (item.category == ItemCategory.FOOD) {
-            feed(item)
+        val inventoryItem = _inventory.find { it.name == item.name }
+        if (inventoryItem == null) {
+            updateInventory { it.add(item) }
+
+            println("\tAdded ${item.name} to inventory!")
         } else {
-            val inventoryItem = _inventory.find { it.name == item.name }
-            if (inventoryItem == null) {
-                updateInventory { it.add(item) }
+            updateInventory { inventory ->
+                inventory.remove(inventoryItem)
 
-                println("\tAdded ${item.name} to inventory!")
-            } else {
-                updateInventory { inventory ->
-                    inventory.remove(inventoryItem)
+                val updatedItem = Item(inventoryItem.name, inventoryItem.category, inventoryItem.amount + 1)
+                inventory.add(updatedItem)
 
-                    val updatedItem = Item(inventoryItem.name, inventoryItem.category, inventoryItem.amount + 1)
-                    inventory.add(updatedItem)
-
-                    println("\tAmount of ${updatedItem.name} in inventory: ${updatedItem.amount}")
-                }
+                println("\tAmount of ${updatedItem.name} in inventory: ${updatedItem.amount}")
             }
+        }
+        if (item.category != ItemCategory.FOOD) {
             use(item)
+        }
+        else {
+            feed(item) // have your cake and eat it too
         }
 
         return clone()
@@ -145,7 +147,18 @@ data class Pet(
             }
         }
 
-        return clone(initInventory = _inventory)
+        return clone()
+    }
+
+    fun addEventListeners(eventListeners: Map<Actor, IntersectionEventListener>): Pet {
+        eventListeners.forEach { (actor, eventListener) ->
+            entity.addIntersectionEventListener(
+                intersectionCounterpart = actor,
+                ge = eventListener
+            )
+        }
+
+        return clone()
     }
 
     fun hasItem(itemName: String): Boolean {
