@@ -68,4 +68,15 @@ internal interface Listlike<T> {
      * @throws IndexOutOfBoundsException wenn der Index außerhalb des gültigen Bereichs liegt (index < 0 || index >= size())
      */
     fun removeAtIndex(index: Int): T
+
+    fun getIndexOf(data: T): Int
+
+    fun getLast(): T
+
+    fun addSorted(data: T, comparator: Comparator<T>)
+
+    fun sort(comparator: Comparator<T>): MyList<T>
+
+    fun quicksort(comparator: Comparator<T>): MyList<T>
 }
+
